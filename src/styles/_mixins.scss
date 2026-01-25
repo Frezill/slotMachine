@@ -1,0 +1,50 @@
+@use 'variables' as *;
+
+// Glassmorphism effect
+@mixin glassmorphism($blur: 10px) {
+  background: $glass-bg;
+  backdrop-filter: blur($blur);
+  -webkit-backdrop-filter: blur($blur);
+  border: 2px solid $glass-border;
+  border-radius: 16px;
+  box-shadow: $glass-shadow;
+}
+
+// Gold glow effect
+@mixin gold-glow($intensity: 20px) {
+  box-shadow: 
+    0 0 5px $gold,
+    0 0 $intensity rgba($gold, 0.5),
+    0 0 ($intensity * 2) rgba($gold, 0.3);
+}
+
+// Red glow effect
+@mixin red-glow($intensity: 15px) {
+  box-shadow: 
+    0 0 5px $red-primary,
+    0 0 $intensity rgba($red-primary, 0.5);
+}
+
+// Text gold glow - subtle effect
+@mixin text-glow($color: $gold) {
+  text-shadow: 0 0 8px rgba($color, 0.4);
+}
+
+// Button hover effect
+@mixin button-hover($color) {
+  transition: all 0.3s ease;
+  
+  &:hover:not(:disabled) {
+    transform: translateY(-2px);
+    box-shadow: 0 0 20px rgba($color, 0.6);
+  }
+  
+  &:active:not(:disabled) {
+    transform: translateY(0);
+  }
+  
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+}
