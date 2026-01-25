@@ -1,6 +1,6 @@
 import { useCallback, useState, useRef } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
-import { FaCog } from 'react-icons/fa';
+import { FaCog, FaHistory } from 'react-icons/fa';
 import { 
   startSpin, 
   setSpinComplete,
@@ -30,6 +30,7 @@ const SlotMachine = () => {
   } = useSelector((state) => state.slot);
   
   const [showSettings, setShowSettings] = useState(false);
+  const [showHistory, setShowHistory] = useState(false);
   // Single source of truth for results
   const [results, setResults] = useState([0, 0, 0, 0]);
   
@@ -101,6 +102,15 @@ const SlotMachine = () => {
       
       <div className="slot-machine__cabinet">
         <button 
+          className="slot-machine__history-btn"
+          onClick={() => setShowHistory(true)}
+          disabled={isSpinning}
+          title="History"
+        >
+          <FaHistory />
+        </button>
+        
+        <button 
           className="slot-machine__settings-btn"
           onClick={() => setShowSettings(true)}
           disabled={isSpinning}
@@ -131,7 +141,7 @@ const SlotMachine = () => {
           onClick={handleSpin}
           disabled={isSpinning}
         >
-          {isSpinning ? 'Drawing...' : 'DRAW'}
+          {isSpinning ? 'ĐANG QUAY...' : 'QUAY'}
         </button>
       </div>
       
@@ -143,6 +153,8 @@ const SlotMachine = () => {
       />
 
       <History 
+        show={showHistory}
+        onClose={() => setShowHistory(false)}
         history={history} 
         onClear={handleClearHistory}
       />
