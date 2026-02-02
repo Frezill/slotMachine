@@ -4,7 +4,7 @@ import { FaCog, FaHistory } from 'react-icons/fa';
 import { 
   startSpin, 
   setSpinComplete,
-  setDigitRange,
+  setNumericRange,
   clearHistory,
 } from '../store/slotSlice';
 import Reel from './Reel';
@@ -15,16 +15,21 @@ import History from './History';
 import spinnerSound from '../assets/spinner-sound.mp3';
 import winnerSound from '../assets/winner-sound.mp3';
 
-// Timing adjusted for 11-second spin (matches spinner-sound.mp3 duration)
-// Rightmost stops at 3.5s, then each 2.5s apart, leftmost at 11s
-const BASE_SPIN_TIME = 3500;
-const REEL_STOP_INCREMENT = 2500;
-const TOTAL_SPIN_TIME = 11500; // Extra 500ms buffer after last reel stops
+// Timing: Play sound 3 times, each digit appears at end of each sound play
+// Sound duration is ~11 seconds
+const SOUND_DURATION = 11000;
+const REEL_STOP_TIMES = {
+  3: SOUND_DURATION,           // D4 - appears at end of 1st sound play (~11s)
+  2: SOUND_DURATION * 2,       // D3 - appears at end of 2nd sound play (~22s)
+  1: SOUND_DURATION * 3,       // D2 - appears at end of 3rd sound play (~33s)
+  0: SOUND_DURATION * 3,       // D1 - appears with D2 at end of 3rd sound (~33s)
+};
+const TOTAL_SPIN_TIME = SOUND_DURATION * 3 + 500; // 3 sound plays + buffer
 
 const SlotMachine = () => {
   const dispatch = useDispatch();
   const { 
-    digitRanges, 
+    numericRange, 
     isSpinning,
     history,
   } = useSelector((state) => state.slot);
@@ -37,61 +42,88 @@ const SlotMachine = () => {
   // Audio refs
   const spinnerSoundRef = useRef(null);
   const winnerSoundRef = useRef(null);
+  const soundLoopTimeoutRef = useRef(null);
+  const spinCompleteTimeoutRef = useRef(null);
+
+  // Play winner sound when a digit appears
+  const playWinnerSound = useCallback(() => {
+    if (winnerSoundRef.current) {
+      winnerSoundRef.current.currentTime = 0;
+      winnerSoundRef.current.volume = 1.0;
+      winnerSoundRef.current.play().catch(() => {});
+    }
+  }, []);
 
   // Handle spin button click - generate all results upfront
   const handleSpin = useCallback(() => {
     if (isSpinning) return;
     
-    // Generate all 4 results NOW, before animation starts
-    const newResults = digitRanges.map(range => 
-      Math.floor(Math.random() * (range.max - range.min + 1) + range.min)
+    // Generate a random number within the numeric range
+    const randomNumber = Math.floor(
+      Math.random() * (numericRange.max - numericRange.min + 1) + numericRange.min
     );
+    
+    // Convert to 4 digits (pad with zeros)
+    const paddedNumber = randomNumber.toString().padStart(4, '0');
+    const newResults = paddedNumber.split('').map(Number);
     
     setResults(newResults);
     dispatch(startSpin());
     
-    // Play spinner sound
-    if (spinnerSoundRef.current) {
-      spinnerSoundRef.current.currentTime = 0;
-      spinnerSoundRef.current.volume = 0.5; // 50% volume
-      spinnerSoundRef.current.play().catch(() => {});
+    // Clear any previous timeouts
+    if (soundLoopTimeoutRef.current) {
+      clearTimeout(soundLoopTimeoutRef.current);
+    }
+    if (spinCompleteTimeoutRef.current) {
+      clearTimeout(spinCompleteTimeoutRef.current);
     }
     
-    // After all reels stop, save to history and play winner sound
-    setTimeout(() => {
+    // Play spinner sound 3 times - each time a digit appears
+    let currentPlayCount = 1;
+    const playSound = () => {
+      if (spinnerSoundRef.current && currentPlayCount <= 3) {
+        spinnerSoundRef.current.currentTime = 0;
+        spinnerSoundRef.current.volume = 0.5;
+        spinnerSoundRef.current.play().catch(() => {});
+        
+        // When sound ends, play again if not done
+        if (currentPlayCount < 3) {
+          currentPlayCount++;
+          soundLoopTimeoutRef.current = setTimeout(playSound, SOUND_DURATION);
+        }
+      }
+    };
+    
+    // Start first sound play
+    playSound();
+    
+    // After all reels stop, save to history
+    spinCompleteTimeoutRef.current = setTimeout(() => {
       dispatch(setSpinComplete(newResults));
       
-      // Stop spinner sound and play winner sound
+      // Stop spinner sound
       if (spinnerSoundRef.current) {
         spinnerSoundRef.current.pause();
       }
-      if (winnerSoundRef.current) {
-        winnerSoundRef.current.currentTime = 0;
-        winnerSoundRef.current.volume = 1.0; // Max volume
-        winnerSoundRef.current.play().catch(() => {});
-      }
+      
+      // Clear timeout refs
+      soundLoopTimeoutRef.current = null;
+      spinCompleteTimeoutRef.current = null;
     }, TOTAL_SPIN_TIME);
-  }, [dispatch, isSpinning, digitRanges]);
+  }, [dispatch, isSpinning, numericRange]);
 
-  // Handle range change for a digit
-  const handleRangeChange = useCallback((index, { min, max }) => {
+  // Handle range change
+  const handleRangeChange = useCallback(({ min, max }) => {
     // Ensure min <= max
     const validMin = Math.min(min, max);
     const validMax = Math.max(min, max);
-    dispatch(setDigitRange({ index, min: validMin, max: validMax }));
+    dispatch(setNumericRange({ min: validMin, max: validMax }));
   }, [dispatch]);
 
   // Handle clear history
   const handleClearHistory = useCallback(() => {
     dispatch(clearHistory());
   }, [dispatch]);
-
-  // Calculate stop delay for each reel (right to left: index 3 stops first)
-  const getStopDelay = (index) => {
-    // Reverse order: rightmost (index 3) stops first
-    const reverseIndex = 3 - index;
-    return BASE_SPIN_TIME + (reverseIndex * REEL_STOP_INCREMENT);
-  };
 
   return (
     <div className="slot-machine">
@@ -120,14 +152,15 @@ const SlotMachine = () => {
         </button>
 
         <div className="reels">
-          {digitRanges.map((range, index) => (
+          {[0, 1, 2, 3].map((index) => (
             <Reel
               key={index}
               index={index}
               isSpinning={isSpinning}
-              range={range}
-              stopDelay={getStopDelay(index)}
+              range={{ min: 0, max: 9 }}
+              stopDelay={REEL_STOP_TIMES[index]}
               targetValue={results[index]}
+              onStop={playWinnerSound}
             />
           ))}
         </div>
@@ -148,7 +181,7 @@ const SlotMachine = () => {
       <SettingsModal
         show={showSettings}
         onClose={() => setShowSettings(false)}
-        digitRanges={digitRanges}
+        numericRange={numericRange}
         onRangeChange={handleRangeChange}
       />
 

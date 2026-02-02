@@ -1,18 +1,8 @@
 import { motion, AnimatePresence } from 'framer-motion';
 import { FaTimes, FaCog } from 'react-icons/fa';
+import RangeSettings from './RangeSettings';
 
-const SettingsModal = ({ show, onClose, digitRanges, onRangeChange }) => {
-  const handleChange = (index, field, value) => {
-    const numValue = parseInt(value, 10);
-    if (!isNaN(numValue) && numValue >= 0 && numValue <= 9) {
-      const currentRange = digitRanges[index];
-      onRangeChange(index, {
-        min: field === 'min' ? numValue : currentRange.min,
-        max: field === 'max' ? numValue : currentRange.max,
-      });
-    }
-  };
-
+const SettingsModal = ({ show, onClose, numericRange, onRangeChange }) => {
   return (
     <AnimatePresence>
       {show && (
@@ -34,7 +24,7 @@ const SettingsModal = ({ show, onClose, digitRanges, onRangeChange }) => {
             <div className="settings-modal__header">
               <h2 className="settings-modal__title">
                 <FaCog className="me-2" />
-                Digit Range Settings
+                Range Settings
               </h2>
               <button className="settings-modal__close" onClick={onClose}>
                 <FaTimes />
@@ -42,45 +32,11 @@ const SettingsModal = ({ show, onClose, digitRanges, onRangeChange }) => {
             </div>
 
             <div className="settings-modal__body">
-              <p className="settings-modal__description">
-                Configure the number range (0-9) for each digit position.
-                <br />
-                <small>Reels stop from right to left (D4 → D1)</small>
-              </p>
-
-              <div className="settings-modal__grid">
-                {digitRanges.map((range, index) => (
-                  <div key={index} className="settings-modal__digit">
-                    <span className="settings-modal__digit-label">
-                      Digit {index + 1}
-                    </span>
-                    <div className="settings-modal__digit-inputs">
-                      <div className="settings-modal__input-group">
-                        <label>Min</label>
-                        <input
-                          type="number"
-                          className="settings-modal__input"
-                          value={range.min}
-                          onChange={(e) => handleChange(index, 'min', e.target.value)}
-                          min={0}
-                          max={9}
-                        />
-                      </div>
-                      <div className="settings-modal__input-group">
-                        <label>Max</label>
-                        <input
-                          type="number"
-                          className="settings-modal__input"
-                          value={range.max}
-                          onChange={(e) => handleChange(index, 'max', e.target.value)}
-                          min={0}
-                          max={9}
-                        />
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
+              <RangeSettings 
+                numericRange={numericRange}
+                onRangeChange={onRangeChange}
+                disabled={false}
+              />
             </div>
 
             <div className="settings-modal__footer">

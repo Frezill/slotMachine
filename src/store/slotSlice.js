@@ -1,13 +1,11 @@
 import { createSlice } from '@reduxjs/toolkit';
 
 const initialState = {
-  // Each digit has its own min/max range
-  digitRanges: [
-    { min: 0, max: 9 }, // Digit 0 (leftmost)
-    { min: 0, max: 9 }, // Digit 1
-    { min: 0, max: 9 }, // Digit 2
-    { min: 0, max: 9 }, // Digit 3 (rightmost)
-  ],
+  // Single numeric range for 4-digit numbers (e.g., 0 to 400 means 0000-0400)
+  numericRange: {
+    min: 0,
+    max: 400,
+  },
   isSpinning: false,
   history: [], // Previous draw results
 };
@@ -16,14 +14,12 @@ const slotSlice = createSlice({
   name: 'slot',
   initialState,
   reducers: {
-    setDigitRange: (state, action) => {
-      const { index, min, max } = action.payload;
-      if (index >= 0 && index < 4) {
-        state.digitRanges[index] = { 
-          min: Math.max(0, Math.min(9, min)), 
-          max: Math.max(0, Math.min(9, max)) 
-        };
-      }
+    setNumericRange: (state, action) => {
+      const { min, max } = action.payload;
+      state.numericRange = { 
+        min: Math.max(0, Math.min(9999, min)), 
+        max: Math.max(0, Math.min(9999, max)) 
+      };
     },
     startSpin: (state) => {
       if (!state.isSpinning) {
@@ -51,7 +47,7 @@ const slotSlice = createSlice({
 });
 
 export const { 
-  setDigitRange, 
+  setNumericRange, 
   startSpin, 
   setSpinComplete,
   clearHistory,

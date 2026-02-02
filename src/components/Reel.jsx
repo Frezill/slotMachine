@@ -6,38 +6,53 @@ const Reel = ({
   isSpinning, 
   range, 
   stopDelay,
-  targetValue
+  targetValue,
+  onStop
 }) => {
   const [displayValue, setDisplayValue] = useState(targetValue);
-  const [spinning, setSpinning] = useState(false);
+  const [stopped, setStopped] = useState(true); // Track if THIS reel has stopped
   const intervalRef = useRef(null);
   const timeoutRef = useRef(null);
   const targetRef = useRef(targetValue);
+  const onStopRef = useRef(onStop);
+  const rangeRef = useRef(range);
 
-  // Always keep targetRef updated
+  // Keep refs updated
   targetRef.current = targetValue;
+  onStopRef.current = onStop;
+  rangeRef.current = range;
 
+  // Handle spin - only depends on isSpinning and stopDelay
   useEffect(() => {
-    if (isSpinning && !spinning) {
-      setSpinning(true);
+    if (isSpinning) {
+      setStopped(false); // This reel is now spinning
       
-      // Rapid number changes during spin
+      // Start spinning
       intervalRef.current = setInterval(() => {
+        const r = rangeRef.current;
         const randomValue = Math.floor(
-          Math.random() * (range.max - range.min + 1) + range.min
+          Math.random() * (r.max - r.min + 1) + r.min
         );
         setDisplayValue(randomValue);
-      }, 50);
+      }, 20);
 
-      // Stop and show target value
+      // Stop at the designated time and show target value
       timeoutRef.current = setTimeout(() => {
-        clearInterval(intervalRef.current);
-        intervalRef.current = null;
+        // Clear the spinning interval
+        if (intervalRef.current) {
+          clearInterval(intervalRef.current);
+          intervalRef.current = null;
+        }
+        // Show target digit
         setDisplayValue(targetRef.current);
-        setSpinning(false);
+        // Mark this reel as stopped
+        setStopped(true);
+        // Play winner sound
+        if (onStopRef.current) onStopRef.current();
       }, stopDelay);
     }
-
+    
+    // Cleanup when isSpinning changes or component unmounts
     return () => {
       if (intervalRef.current) {
         clearInterval(intervalRef.current);
@@ -48,19 +63,23 @@ const Reel = ({
         timeoutRef.current = null;
       }
     };
-  }, [isSpinning, stopDelay, range]);
+  }, [isSpinning, stopDelay]);
 
-  // Sync with targetValue when not spinning
+  // Reset when global spin ends and sync targetValue
   useEffect(() => {
-    if (!isSpinning && !spinning) {
+    if (!isSpinning) {
+      setStopped(true);
       setDisplayValue(targetRef.current);
     }
-  }, [targetValue, isSpinning, spinning]);
+  }, [isSpinning, targetValue]);
+
+  // Use local 'stopped' state for CSS, not global 'isSpinning'
+  const isReelSpinning = isSpinning && !stopped;
 
   return (
-    <div className={`reel ${spinning ? 'reel--spinning' : 'reel--stopped'}`}>
+    <div className={`reel ${isReelSpinning ? 'reel--spinning' : 'reel--stopped'}`}>
       <span className="reel__index">D{index + 1}</span>
-      <span className={`reel__symbol ${spinning ? 'reel__symbol--spinning' : ''}`}>
+      <span className={`reel__symbol ${isReelSpinning ? 'reel__symbol--spinning' : ''}`}>
         {displayValue}
       </span>
     </div>

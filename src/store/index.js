@@ -3,18 +3,11 @@ import { persistStore, persistReducer } from 'redux-persist';
 import storage from 'redux-persist/lib/storage';
 import slotReducer from './slotSlice';
 
-const persistConfig = {
-  key: 'slotMachine',
-  storage,
-  // Don't persist spinning state to avoid UI locks on reload
-  blacklist: [],
-};
-
-// Custom transform to reset spinning state on rehydration
+// Persist config - don't persist spinning state to avoid UI locks on reload
 const slotPersistConfig = {
   key: 'slot',
   storage,
-  blacklist: ['isSpinning', 'spinningDigits'],
+  blacklist: ['isSpinning'],
 };
 
 const rootReducer = combineReducers({

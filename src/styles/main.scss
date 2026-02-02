@@ -70,6 +70,8 @@ body {
     border-radius: 24px;
     position: relative;
     background: rgba(0, 0, 0, 0.5);
+    transform: scale(1.2);
+    margin: 40px 0;
     
     &::before {
       content: '';
